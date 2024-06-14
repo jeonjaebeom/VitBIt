@@ -46,7 +46,7 @@ $ ./run_all_cases.sh
 $ cd Profiling_kernels
 $ ./profile_only_tc.sh
 $ ./profile_tacker.sh
-$ ./profile_tc_fp.sh
+$ ./profile_tc_fㅊ.sh
 $ ./profile_tc_ic_fc.sh
 $ ./profile_vitbit.sh
 ```
