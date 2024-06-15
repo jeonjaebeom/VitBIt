@@ -25,7 +25,7 @@ This repository contains the source code of VitBit, the CUDA implementation of t
  # ViT-Base with only Tensor cores
  $ ./run_only_tc.sh
  # ViT-Base with Tensor and INT cores
- $ ./run_tacker.sh
+ $ ./run_tc_ic.sh
  # ViT-Base with Tensor and FP cores
  $ ./run_tc_fp.sh
  # ViT-Base with Tensor, INT, and FP cores
@@ -45,7 +45,7 @@ $ ./run_all_cases.sh
 ```sh
 $ cd Profiling_kernels
 $ ./profile_only_tc.sh
-$ ./profile_tacker.sh
+$ ./profile_tc_ic.sh
 $ ./profile_tc_fc.sh
 $ ./profile_tc_ic_fc.sh
 $ ./profile_vitbit.sh
