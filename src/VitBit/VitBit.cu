@@ -17,6 +17,8 @@
 
 #include "VitBit_Functions.cuh"
 
+using namespace std;
+
 #define warp_size 32
 #define block_size1 32
 #define block_size2 24
@@ -24,8 +26,9 @@
 #define ORIGINAL_WIDTH 784
 #define PACKING_NUM 2
 #define TC_WIDTH 624
-#define CC_WIDTH ((((ORIGINAL_WIDTH - TC_WIDTH) * 2 + 2) / 3) + ((((ORIGINAL_WIDTH - TC_WIDTH) * 2 + 2) / 3) % 2))
-#define CC_WIDTH_HALF (CC_WIDTH/2)
+#define ORIGINAL_CC_WIDTH (ORIGINAL_WIDTH - TC_WIDTH)
+#define PACKED_CC_WIDTH ((((ORIGINAL_WIDTH - TC_WIDTH) * PACKING_NUM + 2) / (PACKING_NUM + 1)) + ((((ORIGINAL_WIDTH - TC_WIDTH) * PACKING_NUM + 2) / (PACKING_NUM + 1)) % 2))
+#define CC_WIDTH_HALF (PACKED_CC_WIDTH/2)
 #define TOTAL_WIDTH (TC_WIDTH + CC_WIDTH_HALF)
 
 void initializeRandom_int8(int8_t* array, int size) {
@@ -132,12 +135,12 @@ int main(){
 
     ///// Initalizing Input Data, Weight, Bias, Gamma, Beta /////
     /* Rearange 1 */
-    int8_t *Rearrange_TC_input = new int8_t[224 * 224 * 3 * TC_WIDTH / (TC_WIDTH + CC_WIDTH_HALF)];
-    initializeRandom_int8(Rearrange_TC_input, 224 * 224 * 3 * TC_WIDTH / (TC_WIDTH + CC_WIDTH_HALF));
-    int *Rearrange_CC_input_int = new int[224 * 224 * 3 * CC_WIDTH_HALF / (TC_WIDTH + CC_WIDTH_HALF)];
-    initializeRandom_int(Rearrange_CC_input_int, 224 * 224 * 3 * CC_WIDTH_HALF / (TC_WIDTH + CC_WIDTH_HALF));
-    float *Rearrange_CC_input_fp = new float[224 * 224 * 3 * CC_WIDTH_HALF / (TC_WIDTH + CC_WIDTH_HALF)];
-    initializeRandom_float(Rearrange_CC_input_fp, 224 * 224 * 3 * CC_WIDTH_HALF / (TC_WIDTH + CC_WIDTH_HALF));
+    int8_t *Rearrange_TC_input = new int8_t[224 * 224 * 3 * TC_WIDTH / ORIGINAL_WIDTH];
+    initializeRandom_int8(Rearrange_TC_input, 224 * 224 * 3 * TC_WIDTH / ORIGINAL_WIDTH);
+    int *Rearrange_CC_input_int_before_packed = new int[224 * 224 * 3 * (ORIGINAL_CC_WIDTH - CC_WIDTH_HALF) / ORIGINAL_WIDTH];
+    initializeRandom_int(Rearrange_CC_input_int_before_packed, 224 * 224 * 3 * (ORIGINAL_CC_WIDTH - CC_WIDTH_HALF) / ORIGINAL_WIDTH);
+    float *Rearrange_CC_input_fp = new float[224 * 224 * 3 * CC_WIDTH_HALF / ORIGINAL_WIDTH];
+    initializeRandom_float(Rearrange_CC_input_fp, 224 * 224 * 3 * CC_WIDTH_HALF / ORIGINAL_WIDTH);
 
     /* Measuring Preprocessng Time*/
     // clock_t Pre_Processing_Start, Pre_Processing_End;
@@ -145,26 +148,19 @@ int main(){
 
     // Pre_Processing_Start = clock();
 
-    ///
-    int *Input_INT_Packed_Part = new int[WIDTH * 192];;
-    pack_integer_values(Input_INT_part, Input_INT_Packed_Part, NUM_PACKING, (WIDTH * 192));
-    float *Input_FP_part_GPU;
-    cudaMalloc(&Input_INT_Packed_Part, (WIDTH * 192) * sizeof(int));
-    cudaMemcpy(Input_INT_Packed_Part, Input_INT_part, (WIDTH * 192) * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMalloc(&Input_FP_part_GPU, (WIDTH * 192) * sizeof(float));
-    cudaMemcpy(Input_FP_part_GPU, Input_FP_part, (WIDTH * 192) * sizeof(float), cudaMemcpyHostToDevice);
-    ///
+    /* Packing Data */
+    int *Rearrange_CC_input_int = new int[CC_WIDTH_HALF * 192];
+    pack_integer_values(Rearrange_CC_input_int_before_packed, Rearrange_CC_input_int, PACKING_NUM, (CC_WIDTH_HALF * 192));
     
     int8_t *Rearrange1_TC_output_GPU;
     cudaMalloc(&Rearrange1_TC_output_GPU, (TC_WIDTH*192) * sizeof(int8_t));
     cudaMemcpy(Rearrange1_TC_output_GPU, Rearrange_TC_input, (TC_WIDTH*192) * sizeof(int8_t), cudaMemcpyHostToDevice);
     int *Rearrange1_CC_output_int_GPU;
-    cudaMalloc(&Rearrange1_CC_output_int_GPU, (CC_WIDTH_HALF*192) * sizeof(int));
-    cudaMemcpy(Rearrange1_CC_output_int_GPU, Rearrange_CC_input_int, (CC_WIDTH_HALF*192) * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc(&Rearrange1_CC_output_int_GPU, ((ORIGINAL_CC_WIDTH - CC_WIDTH_HALF)*192) * sizeof(int));
+    cudaMemcpy(Rearrange1_CC_output_int_GPU, Rearrange_CC_input_int, ((ORIGINAL_CC_WIDTH - CC_WIDTH_HALF)*192) * sizeof(int), cudaMemcpyHostToDevice);
     float *Rearrange1_CC_output_fp_GPU;
     cudaMalloc(&Rearrange1_CC_output_fp_GPU, (CC_WIDTH_HALF*192) * sizeof(float));
     cudaMemcpy(Rearrange1_CC_output_fp_GPU, Rearrange_CC_input_fp, (CC_WIDTH_HALF*192) * sizeof(float), cudaMemcpyHostToDevice);
-
     /* Layer Normalization 2 */
     // TC Parameters
     int8_t *Norm2_TC_gamma_CPU = new int8_t[192];
