@@ -12,6 +12,8 @@
 #include <cuda_runtime_api.h>
 #include <cuda.h>
 #include <mma.h>
+#include <iostream>
+#include <bitset>
 
 #include "VitBit_Functions.cuh"
 
