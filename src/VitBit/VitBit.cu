@@ -161,6 +161,7 @@ int main(){
     float *Rearrange1_CC_output_fp_GPU;
     cudaMalloc(&Rearrange1_CC_output_fp_GPU, (CC_WIDTH_HALF*192) * sizeof(float));
     cudaMemcpy(Rearrange1_CC_output_fp_GPU, Rearrange_CC_input_fp, (CC_WIDTH_HALF*192) * sizeof(float), cudaMemcpyHostToDevice);
+    
     /* Layer Normalization 2 */
     // TC Parameters
     int8_t *Norm2_TC_gamma_CPU = new int8_t[192];
